@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
@@ -22,15 +22,27 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-   
+
+    - name: Decode keystore
+      run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
     - name: Build with Gradle
-      run: ./gradlew build -x lintDebug
+      run: ./gradlew assembleRelease -x lintRelease
+      env:
+        KEYSTORE_FILE: ${{ github.workspace }}/release.keystore
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
     - name: Tree
       run: tree -L 3
-    
+
+    - name: Get version name
+      id: version
+      run: echo "name=$(grep versionName app/build.gradle.kts | head -1 | awk -F'\"' '{print $2}')" >> "$GITHUB_OUTPUT"
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: Placeholder
-        path: app/build/outputs/apk/debug/app-debug.apk 
+        name: placeholder-${{ steps.version.outputs.name }}
+        path: app/build/outputs/apk/release/app-release.apk
